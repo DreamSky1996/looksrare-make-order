@@ -3,7 +3,9 @@ from eth_account.messages import encode_structured_data
 import json
 from time import time
 from constants import addressesByNetwork, SupportedChainId
+from eth_abi import encode_abi
 import requests
+
 
 
 # rpc_url = "https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"
@@ -22,7 +24,7 @@ def getDomainAndType(chainId, verifyingContract=None):
         verifyingContract_domain = addressesByNetwork[chainId]["EXCHANGE"]
     domain = {
         "name": "LooksRareExchange",
-        "version": 1,
+        "version": "1",
         "chainId": chainId,
         "verifyingContract": verifyingContract_domain,
     }
@@ -37,7 +39,7 @@ def signMakerOrder (privateKey, chainId, order, verifyingContractAddress=None):
         'types': {
             "EIP712Domain": [
                 { 'name': 'name', 'type': 'string' },
-                { 'name': 'version', 'type': 'int' },
+                { 'name': 'version', 'type': 'string' },
                 { 'name': 'chainId', 'type': 'uint256' },
                 { 'name': 'verifyingContract', 'type': 'address' },
             ],
@@ -45,7 +47,7 @@ def signMakerOrder (privateKey, chainId, order, verifyingContractAddress=None):
                 { "name": "isOrderAsk", "type": "bool" },
                 { "name": "signer", "type": "address" },
                 { "name": "collection", "type": "address" },
-                { "name": "price", "type": "string" },
+                { "name": "price", "type": "uint256" },
                 { "name": "tokenId", "type": "uint256" },
                 { "name": "amount", "type": "uint256" },
                 { "name": "strategy", "type": "address" },
@@ -54,61 +56,69 @@ def signMakerOrder (privateKey, chainId, order, verifyingContractAddress=None):
                 { "name": "startTime", "type": "uint256" },
                 { "name": "endTime", "type": "uint256" },
                 { "name": "minPercentageToAsk", "type": "uint256" },
-                { "name": "params", "type": "uint[]" },
+                { "name": "params", "type": "address[]" },
             ],
         }
     }
-
+    msg_dump = json.dumps(msg)
+    msg_lods = json.loads(msg_dump)
+    msg_lods['types']['MakerOrder'][12]['type'] = "bytes"
+    msg_lods['message']['params'] = encode_abi([], order["params"])
+    print(msg_lods['message']['params'])
+    encoded_msg = encode_structured_data(msg_lods)
     w3 = Web3(HTTPProvider(rpc_url))
-    encoded_msg = encode_structured_data(msg)
     signed_msg = w3.eth.account.sign_message(encoded_msg, privateKey)
+    signer = w3.eth.account.recover_message(encoded_msg, signature=signed_msg.signature)
+    print(signer)
     return signed_msg
 
 if __name__ == '__main__':
     privateKey = "0xd250e91b58d892974c3fb69101408db7edfafb396abd7a640ecddf79b5106dfb"
     signer_address = "0x10A073241427Bf63DBbddee4da2f5eCFa8C91Bd0"
-    
+    # collection_address = "0xe14025a1fd3cf44b112175281c56c20170af5650"
+    collection_address = "0x98b54f7e8BA01901e6Ac4E40149b3689acCE1b43"
     now = int(time())
     paramsValue = []
     # chainId = SupportedChainId["MAINNET"]
     chainId = SupportedChainId["RINKEBY"]
     addresses = addressesByNetwork[chainId]
     nonce = int(getNonce(signer_address))
-    print("Nonce: ",nonce) 
+    print("Nonce: ",nonce)
+    print(now, now + 86400)
     makerOrder = {
         "isOrderAsk": True,
         "signer": signer_address,
-        "collection": "0xe14025a1fd3cf44b112175281c56c20170af5650",
-        "price": "1000000000000000000",
+        "collection": collection_address,
+        "price": 1000000000000000,
         "tokenId": 1,
         "amount": 1,
         "strategy": addresses["STRATEGY_STANDARD_SALE"],
         "currency": addresses["WETH"],
         "nonce": nonce,
         "startTime": now,
-        "endTime": now + 86400,
-        "minPercentageToAsk": 7500,
+        "endTime": now + 86375,
+        "minPercentageToAsk": 9800,
         "params": paramsValue,
     }
     
     signatureHash = signMakerOrder(privateKey, chainId, makerOrder)
     signatureStr = signatureHash.signature.hex()
-
+    print(signatureStr)
     order_body = {
         "signature": signatureStr,
+        "isOrderAsk": True,
+        "signer": signer_address,
+        "collection": collection_address,
+        "price": 1000000000000000,
         "tokenId": 1,
-        "collection": "0xe14025a1fd3cf44b112175281c56c20170af5650",
+        "amount": 1,
         "strategy": addresses["STRATEGY_STANDARD_SALE"],
         "currency": addresses["WETH"],
-        "signer": signer_address,
-        "isOrderAsk": True,
         "nonce": nonce,
-        "amount": 1,
-        "price": "1000000000000000000",
         "startTime": now,
-        "endTime": now + 86400,
-        "minPercentageToAsk": 7500,
-        "params": paramsValue
+        "endTime": now + 86375,
+        "minPercentageToAsk": 9800,
+        "params": paramsValue,
     }
     Headers = { "X-Looks-Api-Key" : "API-KEY" }
     # url = "https://api.looksrare.org/api/v1/orders"
