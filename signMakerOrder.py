@@ -6,14 +6,17 @@ from constants import addressesByNetwork, SupportedChainId
 from eth_abi import encode_abi
 import requests
 
+TEST_FLAG = True
 
 
-# rpc_url = "https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"
-rpc_url = "https://rinkeby.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"
+rpc_url = "https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"
+if TEST_FLAG:
+    rpc_url = "https://rinkeby.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"
 
 def getNonce(address):
-    # url ="https://api.looksrare.org/api/v1/orders/nonce?address=" + address
-    url ="https://api-rinkeby.looksrare.org/api/v1/orders/nonce?address=" + address
+    url ="https://api.looksrare.org/api/v1/orders/nonce?address=" + address
+    if TEST_FLAG:
+        url ="https://api-rinkeby.looksrare.org/api/v1/orders/nonce?address=" + address
     res = requests.get(url)
     info = res.json()
     return info['data']
@@ -64,23 +67,22 @@ def signMakerOrder (privateKey, chainId, order, verifyingContractAddress=None):
     msg_lods = json.loads(msg_dump)
     msg_lods['types']['MakerOrder'][12]['type'] = "bytes"
     msg_lods['message']['params'] = encode_abi([], order["params"])
-    print(msg_lods['message']['params'])
     encoded_msg = encode_structured_data(msg_lods)
     w3 = Web3(HTTPProvider(rpc_url))
     signed_msg = w3.eth.account.sign_message(encoded_msg, privateKey)
-    signer = w3.eth.account.recover_message(encoded_msg, signature=signed_msg.signature)
-    print(signer)
     return signed_msg
 
 if __name__ == '__main__':
     privateKey = "0xd250e91b58d892974c3fb69101408db7edfafb396abd7a640ecddf79b5106dfb"
     signer_address = "0x10A073241427Bf63DBbddee4da2f5eCFa8C91Bd0"
-    # collection_address = "0xe14025a1fd3cf44b112175281c56c20170af5650"
-    collection_address = "0x98b54f7e8BA01901e6Ac4E40149b3689acCE1b43"
+    collection_address = "0xe14025a1fd3cf44b112175281c56c20170af5650"
+    if TEST_FLAG:
+        collection_address = "0x98b54f7e8BA01901e6Ac4E40149b3689acCE1b43"
     now = int(time())
     paramsValue = []
-    # chainId = SupportedChainId["MAINNET"]
-    chainId = SupportedChainId["RINKEBY"]
+    chainId = SupportedChainId["MAINNET"]
+    if TEST_FLAG:
+        chainId = SupportedChainId["RINKEBY"]
     addresses = addressesByNetwork[chainId]
     nonce = int(getNonce(signer_address))
     print("Nonce: ",nonce)
@@ -89,7 +91,7 @@ if __name__ == '__main__':
         "isOrderAsk": True,
         "signer": signer_address,
         "collection": collection_address,
-        "price": 1000000000000000,
+        "price": 100000000000000000,
         "tokenId": 1,
         "amount": 1,
         "strategy": addresses["STRATEGY_STANDARD_SALE"],
@@ -103,14 +105,13 @@ if __name__ == '__main__':
     
     signatureHash = signMakerOrder(privateKey, chainId, makerOrder)
     signatureStr = signatureHash.signature.hex()
-    print(signatureStr)
     order_body = {
         "signature": signatureStr,
         "isOrderAsk": True,
         "signer": signer_address,
         "collection": collection_address,
-        "price": 1000000000000000,
-        "tokenId": 1,
+        "price": "100000000000000000",
+        "tokenId": "1",
         "amount": 1,
         "strategy": addresses["STRATEGY_STANDARD_SALE"],
         "currency": addresses["WETH"],
@@ -121,7 +122,8 @@ if __name__ == '__main__':
         "params": paramsValue,
     }
     Headers = { "X-Looks-Api-Key" : "API-KEY" }
-    # url = "https://api.looksrare.org/api/v1/orders"
-    url = "https://api-rinkeby.looksrare.org/api/v1/orders"
+    url = "https://api.looksrare.org/api/v1/orders"
+    if TEST_FLAG:
+        url = "https://api-rinkeby.looksrare.org/api/v1/orders"
     order_res = requests.post(url, json = order_body, headers = Headers)
     print(order_res.text)
