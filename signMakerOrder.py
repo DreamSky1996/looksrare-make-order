@@ -6,8 +6,8 @@ from constants import addressesByNetwork, SupportedChainId
 from eth_abi import encode_abi
 import requests
 
-TEST_FLAG = True
-
+TEST_FLAG = False
+API_Key = ""
 
 rpc_url = "https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"
 if TEST_FLAG:
@@ -85,8 +85,7 @@ if __name__ == '__main__':
         chainId = SupportedChainId["RINKEBY"]
     addresses = addressesByNetwork[chainId]
     nonce = int(getNonce(signer_address))
-    print("Nonce: ",nonce)
-    print(now, now + 86400)
+
     makerOrder = {
         "isOrderAsk": True,
         "signer": signer_address,
@@ -121,7 +120,7 @@ if __name__ == '__main__':
         "minPercentageToAsk": 9800,
         "params": paramsValue,
     }
-    Headers = { "X-Looks-Api-Key" : "API-KEY" }
+    Headers = { "X-Looks-Api-Key" : API_Key }
     url = "https://api.looksrare.org/api/v1/orders"
     if TEST_FLAG:
         url = "https://api-rinkeby.looksrare.org/api/v1/orders"
